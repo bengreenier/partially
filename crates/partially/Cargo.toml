@@ -1,0 +1,13 @@
+[package]
+name = "partially"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = []
+derive = ["dep:partially_derive"]
+
+[dependencies]
+partially_derive = { version = "0.1.0", path = "../partially_derive", optional = true }
