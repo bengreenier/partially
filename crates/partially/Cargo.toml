@@ -2,12 +2,24 @@
 name = "partially"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Provides the Partial trait, and an optional macro to mirror a struct, wrapping each field in an Option"
+readme = "../../../README.md"
+authors = ["Ben Greenier <ben@bengreenier.com>"]
+keywords = ["struct", "field", "optional", "partial"]
+categories = ["rust-patterns"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[package.metadata."docs.rs"]
+all-features = true
 
 [features]
 default = []
 derive = ["dep:partially_derive"]
+
+[dev-dependencies]
+# Causes `cargo test` to include the derive feature
+# without specifying it on the command line
+partially = { path = ".", features = ["derive"] }
 
 [dependencies]
 partially_derive = { version = "0.1.0", path = "../partially_derive", optional = true }
