@@ -1,4 +1,4 @@
-#![doc = include_str!("../../../README.md")]
+#![doc = include_str!(concat!("../", env!("CARGO_PKG_README")))]
 
 /// ## partially_derive
 /// supports automatically generating a mirrored struct with each field wrapped in [`Option<T>`], and generates a `partially::Partial` implementation that allows applying the [`Some`] fields of the mirrored struct to the base struct.
