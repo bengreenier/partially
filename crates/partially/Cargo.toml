@@ -21,6 +21,8 @@ derive = ["dep:partially_derive"]
 # Causes `cargo test` to include the derive feature
 # without specifying it on the command line
 partially = { path = ".", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [dependencies]
 partially_derive = { version = "0.1.0", path = "../partially_derive", optional = true }

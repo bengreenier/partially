@@ -1,4 +1,5 @@
 use darling::{ast, util::PathList, FromDeriveInput};
+use darling::util::Flag;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{Attribute, Generics, Ident, Path, Visibility};
@@ -43,6 +44,9 @@ pub struct DeriveReceiver {
     /// Receives an optional [`Path`] defining the path to the `partially` crate.
     #[darling(rename = "crate")]
     pub krate: Option<Path>,
+
+    /// A flag indicating that the derived struct should contain the `serde(default)` attribute.
+    pub serde: Flag,
 }
 
 impl ToTokens for DeriveReceiver {
@@ -56,6 +60,7 @@ impl ToTokens for DeriveReceiver {
             ref rename,
             ref derive,
             ref krate,
+            ref serde,
         } = *self;
 
         let (_, ty, wher) = generics.split_for_impl();
@@ -82,6 +87,12 @@ impl ToTokens for DeriveReceiver {
                 TokenVec::new_with_vec_and_sep(derive_paths.to_vec(), Separator::Comma);
             tokens.extend(quote! {
                     #[derive(#derive_paths)]
+            });
+        }
+
+        if serde.is_present() {
+            tokens.extend(quote! {
+                #[serde(default)]
             });
         }
 
