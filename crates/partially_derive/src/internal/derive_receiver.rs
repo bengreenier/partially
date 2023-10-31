@@ -1,4 +1,8 @@
-use darling::{ast, util::PathList, FromDeriveInput};
+use darling::{
+    ast,
+    util::{Flag, PathList},
+    FromDeriveInput,
+};
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{Attribute, Generics, Ident, Path, Visibility};
@@ -6,6 +10,7 @@ use syn::{Attribute, Generics, Ident, Path, Visibility};
 use super::{
     field_receiver::FieldReceiver,
     impl_partial::ImplPartial,
+    meta_attribute::MetaAttribute,
     token_vec::{Separator, TokenVec},
 };
 
@@ -38,7 +43,31 @@ pub struct DeriveReceiver {
     /// derive entries for the generated struct to `#[derive()]`
     ///
     /// Note: By default, [`None`].
+    ///
+    /// Note: This is technically just a specific sub-case of [`Self::additional_attrs`]
+    /// but exists on it's own as a cleaner shortcut.
     pub derive: Option<PathList>,
+
+    /// Recieves a [`Vec<Meta>`] containing entries to
+    /// prepend as attributes to the generated struct.
+    ///
+    /// For example: `#[partially(attribute(serde(default))]` would result in `#[serde(default)]`
+    /// being appended to the generated struct.
+    #[darling(rename = "attribute", multiple)]
+    pub additional_attrs: Vec<MetaAttribute>,
+
+    /// Recieves an optional flag that indicates we should not forward attributes
+    /// from the original struct to the generated struct.
+    ///
+    /// Note: By default, `false` - meaning __we will forward attributes__.
+    ///
+    /// Note: If [`Self::additional_attrs`] is present, those attributes __will still be added__
+    /// to the generated struct.
+    ///
+    /// Note: If [`Self::derive`] is present, that attributes __will still be added__ to
+    /// the generated struct.
+    #[darling(rename = "skip_attributes")]
+    pub skip_attrs: Flag,
 
     /// Receives an optional [`Path`] defining the path to the `partially` crate.
     #[darling(rename = "crate")]
@@ -55,6 +84,8 @@ impl ToTokens for DeriveReceiver {
             ref data,
             ref rename,
             ref derive,
+            ref additional_attrs,
+            ref skip_attrs,
             ref krate,
         } = *self;
 
@@ -86,11 +117,20 @@ impl ToTokens for DeriveReceiver {
         }
 
         // handle non-derive attrs
-        for attr in attrs {
-            if !attr.path().is_ident("derive") {
-                tokens.extend(quote!(#attr))
+        if !skip_attrs.is_present() {
+            for attr in attrs {
+                if !attr.path().is_ident("derive") {
+                    tokens.extend(quote!(#attr))
+                }
             }
         }
+
+        // handle additional attrs
+        let additional_attrs =
+            TokenVec::new_with_vec_and_sep(additional_attrs.to_vec(), Separator::Newline);
+        tokens.extend(quote! {
+            #additional_attrs
+        });
 
         let field_tokens = TokenVec::new_with_vec_and_sep(fields.clone(), Separator::CommaNewline);
 
