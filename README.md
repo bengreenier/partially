@@ -108,11 +108,29 @@ fn main() {
 
 Instructs the macro to generate a `#[derive(...)]` attribute on the generated struct.
 
+Note: When using this option with the `skip_attributes` option, the derive attribute **will still be added to the generated struct**.
+
 #### rename
 
 > Usage example: `#[partially(rename = "MyGeneratedStruct")]`.
 
 Instructs the macro to use a given identifier for the generated struct. By default, `PartialBaseStructName` is used, where `BaseStructName` is the name of the original struct.
+
+#### attribute
+
+> Usage example: `#[partially(attribute(serde(rename_all = "PascalCase")))]`
+
+Instructs the macro to add an additional attribute to the generated struct. By default, the attributes defined on the base struct are forwarded to the generated struct, unless the `skip_attributes` option is present.
+
+#### skip_attributes
+
+> Usage example: `#[partially(skip_attributes)]`.
+
+Instructs the macro to skip forwarding attributes from the original struct to the generated struct. By default, all attributes that are present on the base struct are added to the generated struct.
+
+Note: When using this option with the `derive` option, the derive attribute **will still be added to the generated struct**.
+
+Note: When using this option with the `attribute` option, the specified attribute(s) **will still be added to the generated struct**.
 
 #### crate
 

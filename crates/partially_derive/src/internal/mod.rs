@@ -8,6 +8,7 @@ use self::derive_receiver::DeriveReceiver;
 mod derive_receiver;
 mod field_receiver;
 mod impl_partial;
+mod meta_attribute;
 mod token_vec;
 
 pub fn expand_derive_partial(item: &mut DeriveInput) -> TokenStream {
@@ -31,6 +32,7 @@ mod test {
         let mut input: DeriveInput = parse_quote! {
             #[derive(partially::Partial, Default, Debug)]
             #[partially(derive(Default, Debug))]
+            #[partially(attribute(serde(default)))]
             #[some_attr]
             struct Data {
                 /// A documented field.
@@ -53,6 +55,7 @@ mod test {
         let expected: TokenStream = parse_quote! {
             #[derive(Default, Debug)]
             #[some_attr]
+            #[serde(default)]
             struct PartialData {
                 /// A documented field.
                 #[some_attr]
@@ -262,6 +265,73 @@ mod test {
                 fn apply_some(&mut self, partial: Self::Item) {
                     if let Some(type_field) = partial.type_field {
                         self.type_field = type_field.into();
+                    }
+
+                    if let Some(number_field) = partial.number_field {
+                        self.number_field = number_field.into();
+                    }
+
+                    if let Some(transparent_field) = partial.transparent_field {
+                        self.transparent_field = transparent_field.into();
+                    }
+
+                    if let Some(new_field) = partial.new_field {
+                        self.old_field = new_field.into();
+                    }
+                }
+            }
+        };
+
+        assert_eq!(expanded.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn extensive_attr_e2e() {
+        let mut input: DeriveInput = parse_quote! {
+            #[derive(partially::Partial, Default, Debug)]
+            #[partially(derive(PartialEq))]
+            #[partially(attribute(serde(default)))]
+            #[partially(attribute(serde(rename = "PascalCase")))]
+            #[partially(skip_attributes)]
+            #[some_attr]
+            struct Data {
+                /// A documented field.
+                #[some_attr]
+                str_field: String,
+                #[partially(omit)]
+                skipped_field: String,
+                #[partially(as_type = "Option<f32>")]
+                #[some_attr]
+                number_field: i32,
+                #[partially(transparent)]
+                transparent_field: Option<String>,
+                #[partially(rename = "new_field")]
+                old_field: String
+            }
+        };
+
+        let expanded = expand_derive_partial(&mut input);
+
+        let expected: TokenStream = parse_quote! {
+            #[derive(PartialEq)]
+            #[serde(default)]
+            #[serde(rename = "PascalCase")]
+            struct PartialData {
+                /// A documented field.
+                #[some_attr]
+                str_field: Option<String>,
+                #[some_attr]
+                number_field: Option<f32>,
+                transparent_field: Option<String>,
+                new_field: Option<String>
+            }
+
+            impl partially::Partial for Data {
+                type Item = PartialData;
+
+                fn apply_some(&mut self, partial: Self::Item) {
+                    if let Some(str_field) = partial.str_field {
+                        self.str_field = str_field.into();
                     }
 
                     if let Some(number_field) = partial.number_field {
