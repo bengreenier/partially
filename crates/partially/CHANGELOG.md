@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1](https://github.com/bengreenier/partially/compare/partially-v0.1.0...partially-v0.1.1) - 2023-10-31
+
+### Added
+- Add `attribute`, `skip_attributes` opts ([#5](https://github.com/bengreenier/partially/pull/5))
+
+### Other
+- release ([#1](https://github.com/bengreenier/partially/pull/1))
+
 ## [0.1.0](https://github.com/bengreenier/partially/releases/tag/partially-v0.1.0) - 2023-09-17
 
 ### Added
