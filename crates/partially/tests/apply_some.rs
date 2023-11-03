@@ -13,10 +13,14 @@ impl partially::Partial for Base {
     type Item = PartialBase;
 
     #[allow(clippy::useless_conversion)]
-    fn apply_some(&mut self, partial: Self::Item) {
+    fn apply_some(&mut self, partial: Self::Item) -> bool {
+        let will_apply_some = partial.value.is_some();
+
         if let Some(value) = partial.value {
             self.value = value.into();
         }
+
+        will_apply_some
     }
 }
 
@@ -31,11 +35,11 @@ fn basic_apply() {
         value: "initial".to_string(),
     };
 
-    data.apply_some(empty_partial);
+    assert!(!data.apply_some(empty_partial));
 
     assert_eq!(data.value, "initial".to_string());
 
-    data.apply_some(full_partial);
+    assert!(data.apply_some(full_partial));
 
-    assert_eq!(data.value, "modified".to_string())
+    assert_eq!(data.value, "modified".to_string());
 }

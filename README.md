@@ -15,7 +15,7 @@ With derive:
 use partially::Partial;
 
 // define a base structure, with the `Partial` derive macro
-#[derive(partially_derive::Partial)]
+#[derive(Partial)]
 // further, instruct the macro to derive `Default` on the generated structure
 #[partially(derive(Default))]
 struct Data {
@@ -40,14 +40,14 @@ fn main() {
         value: "initial".to_string(),
     };
 
-    // apply the empty partial
-    full.apply_some(empty_partial);
+    // apply the empty partial (note that `false` is returned, indicating nothing was applied)
+    assert!(!full.apply_some(empty_partial));
 
     // note that applying the empty partial had no effect
     assert_eq!(full.value, "initial".to_string());
 
-    // apply the full partial
-    full.apply_some(full_partial);
+    // apply the full partial (note that `true` is returned, indicating something was applied)
+    assert!(full.apply_some(full_partial));
 
     // note that applying the full partial modified the value
     assert_eq!(full.value, "modified".to_string());
@@ -68,14 +68,18 @@ struct PartialBase {
     value: Option<String>,
 }
 
-impl partially::Partial for Base {
+impl Partial for Base {
     type Item = PartialBase;
 
     #[allow(clippy::useless_conversion)]
-    fn apply_some(&mut self, partial: Self::Item) {
+    fn apply_some(&mut self, partial: Self::Item) -> bool {
+        let will_apply_some = partial.value.is_some();
+
         if let Some(value) = partial.value {
             self.value = value.into();
         }
+
+        will_apply_some
     }
 }
 
@@ -89,11 +93,11 @@ fn main() {
         value: "initial".to_string(),
     };
 
-    data.apply_some(empty_partial);
+    assert!(!data.apply_some(empty_partial));
 
     assert_eq!(data.value, "initial".to_string());
 
-    data.apply_some(full_partial);
+    assert!(data.apply_some(full_partial));
 
     assert_eq!(data.value, "modified".to_string())
 }
