@@ -14,7 +14,12 @@ categories = ["rust-patterns"]
 all-features = true
 
 [features]
-default = []
+default = ["std"]
+
+# Enables features that depend on the rust standard library
+std = []
+
+# Enables the derive macro
 derive = ["dep:partially_derive"]
 
 [dev-dependencies]
