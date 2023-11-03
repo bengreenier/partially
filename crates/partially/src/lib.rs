@@ -73,8 +73,9 @@ pub trait Partial {
     /// The type of the partial structure, that may have [`Some`] values.
     type Item;
 
-    /// Applies [`Some`] values from [`Partial::Item`] to [`self`].
+    /// Applies [`Some`] values from [`Partial::Item`] to [`self`], returning `true` when
+    /// updates were made, and `false` when nothing was applied.
     ///
     /// Note: [`None`] values should not be applied.
-    fn apply_some(&mut self, partial: Self::Item);
+    fn apply_some(&mut self, partial: Self::Item) -> bool;
 }

@@ -17,11 +17,11 @@ fn basic_apply_some() {
         value: "initial".to_string(),
     };
 
-    full.apply_some(empty_partial);
+    assert!(!full.apply_some(empty_partial));
 
     assert_eq!(full.value, "initial".to_string());
 
-    full.apply_some(full_partial);
+    assert!(full.apply_some(full_partial));
 
     assert_eq!(full.value, "modified".to_string());
 }

@@ -35,10 +35,23 @@ impl<'a> ToTokens for ImplPartial<'a> {
             parse_quote!(partially)
         };
 
+        let field_is_somes = fields
+            .iter()
+            .map(|f| {
+                // this is enforced with a better error by [`FieldReceiver::validate`].
+                let from_ident = f.ident.as_ref().unwrap();
+
+                let to_ident = f.rename.as_ref().unwrap_or(from_ident);
+
+                quote!(partial.#to_ident.is_some())
+            })
+            .collect();
+        let field_is_somes = TokenVec::new_with_vec_and_sep(field_is_somes, Separator::Or);
+
         let field_applicators = fields
             .iter()
             .map(|f| {
-                // // this is enforced with a better error by [`FieldReceiver::validate`].
+                // this is enforced with a better error by [`FieldReceiver::validate`].
                 let from_ident = f.ident.as_ref().unwrap();
 
                 let to_ident = f.rename.as_ref().unwrap_or(from_ident);
@@ -57,8 +70,12 @@ impl<'a> ToTokens for ImplPartial<'a> {
             impl #imp #krate::Partial for #from_ident #ty #wher {
                 type Item = #to_ident #ty;
 
-                fn apply_some(&mut self, partial: Self::Item) {
+                fn apply_some(&mut self, partial: Self::Item) -> bool {
+                    let will_apply_some = #field_is_somes;
+
                     #field_applicators
+
+                    will_apply_some
                 }
             }
         })

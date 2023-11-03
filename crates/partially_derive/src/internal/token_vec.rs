@@ -13,6 +13,10 @@ pub enum Separator {
     CommaNewline,
     /// Value of `::`.
     ColonColon,
+    /// Value of `&&`
+    And,
+    /// Value of `||`
+    Or,
 }
 
 impl Default for Separator {
@@ -63,6 +67,8 @@ impl<T: ToTokens> ToTokens for TokenVec<T> {
                 Separator::CommaNewline => tokens.extend(quote! {
                     #token,
                 }),
+                Separator::And => tokens.extend(quote!(#token&&)),
+                Separator::Or => tokens.extend(quote!(#token||)),
             }
         }
     }
@@ -147,6 +153,32 @@ mod test {
             b,
             c
         };
+        let expected = expected.into_token_stream().to_string();
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn separates_and() {
+        let instance =
+            TokenVec::new_with_vec_and_sep(vec![quote!(a), quote!(b), quote!(c)], Separator::And);
+
+        let actual = instance.into_token_stream().to_string();
+
+        let expected = quote!(a && b && c);
+        let expected = expected.into_token_stream().to_string();
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn separates_or() {
+        let instance =
+            TokenVec::new_with_vec_and_sep(vec![quote!(a), quote!(b), quote!(c)], Separator::Or);
+
+        let actual = instance.into_token_stream().to_string();
+
+        let expected = quote!(a || b || c);
         let expected = expected.into_token_stream().to_string();
 
         assert_eq!(actual, expected);
