@@ -1,6 +1,6 @@
 [package]
 name = "partially"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Provides the Partial trait, and an optional macro to mirror a struct, wrapping each field in an Option"
@@ -32,4 +32,4 @@ serde_json = "1.0.108"
 partially = { path = ".", features = ["derive"] }
 
 [dependencies]
-partially_derive = { version = "0.1.1", path = "../partially_derive", optional = true }
+partially_derive = { version = "0.1.2", path = "../partially_derive", optional = true }

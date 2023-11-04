@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/bengreenier/partially/compare/partially_derive-v0.1.1...partially_derive-v0.1.2) - 2023-11-04
+
+### Added
+- Indicate if `apply_some` did apply anything ([#9](https://github.com/bengreenier/partially/pull/9))
+
 ## [0.1.1](https://github.com/bengreenier/partially/compare/partially_derive-v0.1.0...partially_derive-v0.1.1) - 2023-10-31
 
 ### Added
