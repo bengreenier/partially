@@ -17,6 +17,7 @@ all-features = true
 default = ["std"]
 
 # Enables features that depend on the rust standard library
+# Note: There currently aren't any features that fall into this category
 std = []
 
 # Enables the derive macro
