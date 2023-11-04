@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.2](https://github.com/bengreenier/partially/compare/partially-v0.1.1...partially-v0.1.2) - 2023-11-04
+## [0.2.0](https://github.com/bengreenier/partially/compare/partially-v0.1.1...partially-v0.2.0) - 2023-11-04
 
 ### Added
 - *(no_std)* Support `no_std` targets ([#12](https://github.com/bengreenier/partially/pull/12))
