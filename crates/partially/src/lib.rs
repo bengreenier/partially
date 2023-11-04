@@ -1,3 +1,6 @@
+// support `no_std` environments
+#![no_std]
+// include our readme docs
 #![doc = include_str!(concat!("../", env!("CARGO_PKG_README")))]
 
 /// ## partially_derive

@@ -2,24 +2,36 @@ name: PR validation
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build_test_lint:
-
+  build_test_lint_std:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
-    - name: Run clippy
-      run: cargo clippy --verbose
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-all-features
+        run: cargo install cargo-all-features
+      - name: Build
+        run: cargo build-all-features --exclude test_no_std --workspace --verbose
+      - name: Run tests
+        run: cargo test-all-features --exclude test_no_std --workspace --verbose
+      - name: Run clippy
+        run: cargo clippy --exclude test_no_std --workspace --verbose
+
+  build_no_std:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      # the test_no_std crate requires the nightly toolchain
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Build test_no_std
+        run: cd crates/test_no_std && cargo +nightly build --verbose
