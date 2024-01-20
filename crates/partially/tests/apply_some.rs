@@ -24,6 +24,20 @@ impl partially::Partial for Base {
     }
 }
 
+impl partially::Partial for PartialBase {
+    type Item = PartialBase;
+
+    fn apply_some(&mut self, partial: Self::Item) -> bool {
+        let will_apply_some = partial.value.is_some();
+
+        if let Some(value) = partial.value {
+            self.value = value.into();
+        }
+
+        will_apply_some
+    }
+}
+
 #[test]
 fn basic_apply() {
     let empty_partial = PartialBase::default();
@@ -42,4 +56,16 @@ fn basic_apply() {
     assert!(data.apply_some(full_partial));
 
     assert_eq!(data.value, "modified".to_string());
+}
+
+#[test]
+fn partial_apply() {
+    let mut empty_partial = PartialBase::default();
+    let full_partial = PartialBase {
+        value: Some("modified".to_string()),
+    };
+
+    assert!(empty_partial.apply_some(full_partial));
+
+    assert_eq!(empty_partial.value, Some("modified".to_string()));
 }

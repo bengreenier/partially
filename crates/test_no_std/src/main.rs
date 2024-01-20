@@ -29,5 +29,10 @@ fn start(_argc: isize, _argv: *const *const u8) -> isize {
 
     assert!(base.apply_some(partial));
 
+    let mut base = PartialTest { data: None };
+    let partial = PartialTest { data: Some(2) };
+
+    assert!(base.apply_some(partial));
+
     0
 }
