@@ -153,6 +153,20 @@ impl ToTokens for DeriveReceiver {
         // write the impl
         tokens.extend(quote! {
             #impl_partial
+        });
+
+        // create the partial => partial impl
+        let partial_impl_partial = ImplPartial {
+            krate,
+            from_ident: &to_ident,
+            to_ident: &to_ident,
+            generics,
+            fields: &fields,
+        };
+
+        // write it
+        tokens.extend(quote! {
+            #partial_impl_partial
         })
     }
 }

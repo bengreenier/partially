@@ -94,6 +94,35 @@ mod test {
                     will_apply_some
                 }
             }
+
+            impl partially::Partial for PartialData {
+                type Item = PartialData;
+
+                fn apply_some(&mut self, partial: Self::Item) -> bool {
+                    let will_apply_some = partial.str_field.is_some() ||
+                        partial.number_field.is_some() ||
+                        partial.transparent_field.is_some() ||
+                        partial.new_field.is_some();
+
+                    if let Some(str_field) = partial.str_field {
+                        self.str_field = str_field.into();
+                    }
+
+                    if let Some(number_field) = partial.number_field {
+                        self.number_field = number_field.into();
+                    }
+
+                    if let Some(transparent_field) = partial.transparent_field {
+                        self.transparent_field = transparent_field.into();
+                    }
+
+                    if let Some(new_field) = partial.new_field {
+                        self.old_field = new_field.into();
+                    }
+
+                    will_apply_some
+                }
+            }
         };
 
         assert_eq!(expanded.to_string(), expected.to_string());
@@ -165,6 +194,35 @@ mod test {
                     will_apply_some
                 }
             }
+
+            impl partially::Partial for OptData {
+                type Item = OptData;
+
+                fn apply_some(&mut self, partial: Self::Item) -> bool {
+                    let will_apply_some = partial.str_field.is_some() ||
+                        partial.number_field.is_some() ||
+                        partial.transparent_field.is_some() ||
+                        partial.new_field.is_some();
+
+                    if let Some(str_field) = partial.str_field {
+                        self.str_field = str_field.into();
+                    }
+
+                    if let Some(number_field) = partial.number_field {
+                        self.number_field = number_field.into();
+                    }
+
+                    if let Some(transparent_field) = partial.transparent_field {
+                        self.transparent_field = transparent_field.into();
+                    }
+
+                    if let Some(new_field) = partial.new_field {
+                        self.old_field = new_field.into();
+                    }
+
+                    will_apply_some
+                }
+            }
         };
 
         assert_eq!(expanded.to_string(), expected.to_string());
@@ -209,6 +267,35 @@ mod test {
             }
 
             impl<T> partially::Partial for Data<T> {
+                type Item = PartialData<T>;
+
+                fn apply_some(&mut self, partial: Self::Item) -> bool {
+                    let will_apply_some = partial.type_field.is_some() ||
+                        partial.number_field.is_some() ||
+                        partial.transparent_field.is_some() ||
+                        partial.new_field.is_some();
+
+                    if let Some(type_field) = partial.type_field {
+                        self.type_field = type_field.into();
+                    }
+
+                    if let Some(number_field) = partial.number_field {
+                        self.number_field = number_field.into();
+                    }
+
+                    if let Some(transparent_field) = partial.transparent_field {
+                        self.transparent_field = transparent_field.into();
+                    }
+
+                    if let Some(new_field) = partial.new_field {
+                        self.old_field = new_field.into();
+                    }
+
+                    will_apply_some
+                }
+            }
+
+            impl<T> partially::Partial for PartialData<T> {
                 type Item = PartialData<T>;
 
                 fn apply_some(&mut self, partial: Self::Item) -> bool {
@@ -308,6 +395,35 @@ mod test {
                     will_apply_some
                 }
             }
+
+            impl<T> custom_partially::Partial for PartialData<T> where T : Sized {
+                type Item = PartialData<T>;
+
+                fn apply_some(&mut self, partial: Self::Item) -> bool {
+                    let will_apply_some = partial.type_field.is_some() ||
+                        partial.number_field.is_some() ||
+                        partial.transparent_field.is_some() ||
+                        partial.new_field.is_some();
+
+                    if let Some(type_field) = partial.type_field {
+                        self.type_field = type_field.into();
+                    }
+
+                    if let Some(number_field) = partial.number_field {
+                        self.number_field = number_field.into();
+                    }
+
+                    if let Some(transparent_field) = partial.transparent_field {
+                        self.transparent_field = transparent_field.into();
+                    }
+
+                    if let Some(new_field) = partial.new_field {
+                        self.old_field = new_field.into();
+                    }
+
+                    will_apply_some
+                }
+            }
         };
 
         assert_eq!(expanded.to_string(), expected.to_string());
@@ -355,6 +471,35 @@ mod test {
             }
 
             impl partially::Partial for Data {
+                type Item = PartialData;
+
+                fn apply_some(&mut self, partial: Self::Item) -> bool {
+                    let will_apply_some = partial.str_field.is_some() ||
+                        partial.number_field.is_some() ||
+                        partial.transparent_field.is_some() ||
+                        partial.new_field.is_some();
+
+                    if let Some(str_field) = partial.str_field {
+                        self.str_field = str_field.into();
+                    }
+
+                    if let Some(number_field) = partial.number_field {
+                        self.number_field = number_field.into();
+                    }
+
+                    if let Some(transparent_field) = partial.transparent_field {
+                        self.transparent_field = transparent_field.into();
+                    }
+
+                    if let Some(new_field) = partial.new_field {
+                        self.old_field = new_field.into();
+                    }
+
+                    will_apply_some
+                }
+            }
+
+            impl partially::Partial for PartialData {
                 type Item = PartialData;
 
                 fn apply_some(&mut self, partial: Self::Item) -> bool {
