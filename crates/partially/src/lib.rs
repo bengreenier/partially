@@ -39,6 +39,9 @@
 /// > Usage example: `#[partially(as_type = "Option<f32>")]`.
 /// Instructs the macro to use the provided type instead of [`Option<T>`] when generating the field. Note that the provided type will be used verbatim, so if you expect an [`Option<T>`] value, you'll need to manually specify that.
 /// Note: When using `as_type`, the given type must `Into<BaseType>` where `BaseType` is the original field type. This is required for `Partial` trait implementation.
+/// ### nested
+/// > Usage example: `#[partially(nested)]`
+/// Indicates to the macro that this field is [`Partial`]. The type in the generated struct will then be the associated [`Partial::Item`] type of the field's type and the struct's [`Partial::apply_some`] implementation will call [`Partial::apply_some`] on the field.
 ///
 /// ## Example
 /// ```

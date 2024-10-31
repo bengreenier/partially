@@ -1,5 +1,6 @@
 use quote::{quote, ToTokens};
-use syn::{parse_quote, Generics, Ident, Path};
+use std::iter;
+use syn::{Generics, Ident, Path};
 
 use super::{
     field_receiver::FieldReceiver,
@@ -7,7 +8,7 @@ use super::{
 };
 
 pub struct ImplPartial<'a> {
-    pub krate: &'a Option<Path>,
+    pub krate: &'a Path,
     pub generics: &'a Generics,
     pub from_ident: &'a Ident,
     pub to_ident: &'a Ident,
@@ -28,23 +29,15 @@ impl<'a> ToTokens for ImplPartial<'a> {
 
         let (imp, ty, wher) = generics.split_for_impl();
 
-        // parse the crate config, or use `partially` for the crate path
-        let krate = if let Some(krate) = krate {
-            krate.to_owned()
-        } else {
-            parse_quote!(partially)
-        };
-
-        let field_is_somes = fields
-            .iter()
-            .map(|f| {
+        let field_is_somes = iter::once(quote!(false))
+            .chain(fields.iter().filter(|f| !f.nested.is_present()).map(|f| {
                 // this is enforced with a better error by [`FieldReceiver::validate`].
                 let from_ident = f.ident.as_ref().unwrap();
 
                 let to_ident = f.rename.as_ref().unwrap_or(from_ident);
 
                 quote!(partial.#to_ident.is_some())
-            })
+            }))
             .collect();
         let field_is_somes = TokenVec::new_with_vec_and_sep(field_is_somes, Separator::Or);
 
@@ -56,9 +49,18 @@ impl<'a> ToTokens for ImplPartial<'a> {
 
                 let to_ident = f.rename.as_ref().unwrap_or(from_ident);
 
-                quote! {
-                    if let Some(#to_ident) = partial.#to_ident {
-                        self.#from_ident = #to_ident.into();
+                if f.nested.is_present() {
+                    quote! {
+                        will_apply_some = #krate::Partial::apply_some(
+                            &mut self.#from_ident,
+                            partial.#to_ident
+                        ) || will_apply_some;
+                    }
+                } else {
+                    quote! {
+                        if let Some(#to_ident) = partial.#to_ident {
+                            self.#from_ident = #to_ident.into();
+                        }
                     }
                 }
             })
@@ -71,7 +73,7 @@ impl<'a> ToTokens for ImplPartial<'a> {
                 type Item = #to_ident #ty;
 
                 fn apply_some(&mut self, partial: Self::Item) -> bool {
-                    let will_apply_some = #field_is_somes;
+                    let mut will_apply_some = #field_is_somes;
 
                     #field_applicators
 

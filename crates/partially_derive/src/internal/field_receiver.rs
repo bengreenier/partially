@@ -1,6 +1,7 @@
 use darling::{util::Flag, FromField, Result};
-use quote::{quote, ToTokens};
-use syn::{parse_quote, Ident, Type, Visibility};
+use proc_macro2::TokenStream;
+use quote::quote;
+use syn::{parse_quote, Ident, Path, Type, Visibility};
 
 #[derive(Debug, FromField)]
 #[darling(attributes(partially), forward_attrs, and_then = FieldReceiver::validate)]
@@ -39,6 +40,10 @@ pub struct FieldReceiver {
     /// Note: If specified, the given [`Type`] will be used verbatim, not wrapped in an [`Option`].
     /// Note: By default, [`Option<Self::ty>`] is used.
     pub as_type: Option<Type>,
+
+    /// An optional flag that indicates that this field has a type that is [`Partial`] and should
+    /// be treated as such.
+    pub nested: Flag,
 }
 
 impl FieldReceiver {
@@ -52,25 +57,30 @@ impl FieldReceiver {
         }
 
         if self.omit.is_present()
-            && (self.rename.is_some() || self.transparent.is_present() || self.as_type.is_some())
+            && (self.rename.is_some()
+                || self.transparent.is_present()
+                || self.as_type.is_some()
+                || self.nested.is_present())
         {
             acc.push(darling::Error::custom(
                 "cannot use omit with any other options",
             ));
         }
 
-        if self.transparent.is_present() && self.as_type.is_some() {
+        if self.transparent.is_present() as i32
+            + self.as_type.is_some() as i32
+            + self.nested.is_present() as i32
+            > 1
+        {
             acc.push(darling::Error::custom(
-                "cannot use both transparent and as_type",
+                "transparent, as_type and nested are mutually exclusive",
             ));
         }
 
         acc.finish_with(self)
     }
-}
 
-impl ToTokens for FieldReceiver {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    pub fn to_tokens(&self, tokens: &mut TokenStream, krate: &Path) {
         if self.omit.is_present() {
             return;
         }
@@ -89,6 +99,10 @@ impl ToTokens for FieldReceiver {
             src_type.to_owned()
         } else if let Some(ty) = &self.as_type {
             ty.to_owned()
+        } else if self.nested.is_present() {
+            parse_quote! {
+                <#src_type as #krate::Partial>::Item
+            }
         } else {
             let ty: Type = parse_quote! {
                 Option<#src_type>
@@ -131,6 +145,7 @@ mod test {
             omit: Flag::default(),
             transparent: Flag::default(),
             as_type: None,
+            nested: Flag::default(),
         }
     }
 
@@ -172,13 +187,42 @@ mod test {
     }
 
     #[test]
-    fn invalidate_transparent_as_type() {
+    fn invalidate_omit_nested() {
         let mut instance = make_dummy();
-        instance.transparent = Flag::present();
-        instance.as_type = Some(syn::Type::Verbatim(quote!(NewDummyField)));
+        instance.omit = Flag::present();
+        instance.nested = Flag::present();
 
         assert!(instance.validate().is_err())
     }
+
+    #[test]
+    fn invalidate_transparent_as_type_nested() {
+        // as_type + transparent
+        let mut instance = make_dummy();
+        instance.as_type = Some(syn::Type::Verbatim(quote!(NewDummyField)));
+        instance.transparent = Flag::present();
+        assert!(instance.validate().is_err());
+
+        // as_type + transparent + nested
+        let mut instance = make_dummy();
+        instance.as_type = Some(syn::Type::Verbatim(quote!(NewDummyField)));
+        instance.transparent = Flag::present();
+        instance.nested = Flag::present();
+        assert!(instance.validate().is_err());
+
+        // as_type + nested
+        let mut instance = make_dummy();
+        instance.as_type = Some(syn::Type::Verbatim(quote!(NewDummyField)));
+        instance.nested = Flag::present();
+        assert!(instance.validate().is_err());
+
+        // nested + transparent
+        let mut instance = make_dummy();
+        instance.transparent = Flag::present();
+        instance.nested = Flag::present();
+        assert!(instance.validate().is_err());
+    }
+
 
     #[test]
     fn validate() {
