@@ -71,14 +71,33 @@
 #[cfg(feature = "derive")]
 pub use partially_derive::Partial;
 
-/// Allows applying a [`Partial::Item`] to `Self`, where [`Partial::Item`] has [`Some`] values.
 pub trait Partial {
-    /// The type of the partial structure, that may have [`Some`] values.
-    type Item;
+    type Model: Model<Partial = Self>;
+    type FieldType;
 
-    /// Applies [`Some`] values from [`Partial::Item`] to [`self`], returning `true` when
-    /// updates were made, and `false` when nothing was applied.
-    ///
-    /// Note: [`None`] values should not be applied.
-    fn apply_some(&mut self, partial: Self::Item) -> bool;
+    fn fields(&self) -> &[Self::FieldType];
+}
+
+pub trait Model {
+    type Partial: Partial<Model = Self>;
+    type Report;
+
+    fn apply_some(&mut self, partial: Self::Partial) -> Self::Report;
+}
+
+pub trait FromPartial: Model + Default {
+    fn from_partial(partial: Self::Partial) -> Self;
+}
+
+impl<T> FromPartial for T
+where
+    T: Default + Model,
+{
+    fn from_partial(partial: Self::Partial) -> Self {
+        let mut default = Self::default();
+
+        default.apply_some(partial);
+
+        default
+    }
 }
