@@ -4,6 +4,7 @@ version = "0.2.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Provides the Partial trait, and an optional macro to mirror a struct, wrapping each field in an Option"
+repository = "https://github.com/bengreenier/partially"
 readme = "../../README.md"
 authors = ["Ben Greenier <ben@bengreenier.com>"]
 keywords = ["struct", "field", "optional", "partial"]
