@@ -71,7 +71,7 @@ fn generic_nested_apply_some() {
 #[derive(partially_derive::Partial)]
 #[partially(derive(Default))]
 struct ExplicitOverridesStillWin {
-    #[partially(as_type = "Option<String>")]
+    #[partially(as_type = "Option<Inner>")]
     inner: Inner,
 }
 
@@ -84,7 +84,9 @@ fn explicit_as_type_still_applies() {
     };
 
     let patch = PartialExplicitOverridesStillWin {
-        inner: Some("after".to_string()),
+        inner: Some(Inner {
+            value: "after".to_string(),
+        }),
     };
 
     assert!(value.apply_some(patch));

@@ -52,7 +52,9 @@ impl<'a> ToTokens for ImplPartial<'a> {
         let has_non_nested_fields = !non_nested_field_is_somes.is_empty();
         let non_nested_field_is_somes =
             TokenVec::new_with_vec_and_sep(non_nested_field_is_somes, Separator::Or);
-        let field_is_somes = if has_nested_fields || !has_non_nested_fields {
+        let field_is_somes = if !has_non_nested_fields {
+            quote!(false)
+        } else if has_nested_fields {
             quote!(false || #non_nested_field_is_somes)
         } else {
             quote!(#non_nested_field_is_somes)
