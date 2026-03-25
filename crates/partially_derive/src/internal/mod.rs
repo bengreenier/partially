@@ -531,4 +531,62 @@ mod test {
 
         assert_eq!(expanded.to_string(), expected.to_string());
     }
+
+    #[test]
+    fn nested_e2e() {
+        let mut input: DeriveInput = parse_quote! {
+            #[derive(partially::Partial, Default, Debug)]
+            #[partially(derive(Default, Debug))]
+            struct Outer {
+                value: String,
+                inner: Inner,
+            }
+        };
+
+        let expanded = expand_derive_partial(&mut input);
+
+        let expected: TokenStream = parse_quote! {
+            #[derive(Default, Debug)]
+            struct PartialOuter {
+                value: Option<String>,
+                inner: PartialInner
+            }
+
+            impl partially::Partial for Outer {
+                type Item = PartialOuter;
+
+                fn apply_some(&mut self, partial: Self::Item) -> bool {
+                    let mut will_apply_some = false ||
+                        partial.value.is_some();
+
+                    if let Some(value) = partial.value {
+                        self.value = value.into();
+                    }
+
+                    will_apply_some = partially::Partial::apply_some(&mut self.inner, partial.inner) || will_apply_some;
+
+                    will_apply_some
+                }
+            }
+
+            impl partially::Partial for PartialOuter {
+                type Item = PartialOuter;
+
+                fn apply_some(&mut self, partial: Self::Item) -> bool {
+                    let mut will_apply_some = false ||
+                        partial.value.is_some();
+
+                    if let Some(value) = partial.value {
+                        self.value = value.into();
+                    }
+
+                    will_apply_some = partially::Partial::apply_some(&mut self.inner, partial.inner) || will_apply_some;
+
+                    will_apply_some
+                }
+            }
+        };
+
+        assert_eq!(expanded.to_string(), expected.to_string());
+    }
 }

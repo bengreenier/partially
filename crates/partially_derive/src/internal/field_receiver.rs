@@ -1,6 +1,6 @@
 use darling::{util::Flag, FromField, Result};
 use quote::{quote, ToTokens};
-use syn::{parse_quote, Ident, Type, Visibility};
+use syn::{parse_quote, Ident, PathArguments, Type, Visibility};
 
 #[derive(Debug, FromField)]
 #[darling(attributes(partially), forward_attrs, and_then = FieldReceiver::validate)]
@@ -42,6 +42,94 @@ pub struct FieldReceiver {
 }
 
 impl FieldReceiver {
+    fn auto_nested_ty(&self) -> Option<Type> {
+        if self.omit.is_present() || self.transparent.is_present() || self.as_type.is_some() {
+            return None;
+        }
+
+        let Type::Path(mut path) = self.ty.clone() else {
+            return None;
+        };
+
+        if path.qself.is_some() {
+            return None;
+        }
+
+        let first_ident = path.path.segments.first().map(|s| s.ident.to_string())?;
+        if matches!(first_ident.as_str(), "std" | "core" | "alloc") {
+            return None;
+        }
+
+        let last = path.path.segments.last_mut()?;
+        match last.arguments {
+            PathArguments::None | PathArguments::AngleBracketed(_) => {}
+            _ => return None,
+        }
+
+        let type_name = last.ident.to_string();
+        if !type_name
+            .chars()
+            .next()
+            .map(|ch| ch.is_ascii_uppercase())
+            .unwrap_or(false)
+        {
+            return None;
+        }
+
+        if type_name.starts_with("Partial")
+            || matches!(
+                type_name.as_str(),
+                "String"
+                    | "Self"
+                    | "bool"
+                    | "char"
+                    | "str"
+                    | "i8"
+                    | "i16"
+                    | "i32"
+                    | "i64"
+                    | "i128"
+                    | "isize"
+                    | "u8"
+                    | "u16"
+                    | "u32"
+                    | "u64"
+                    | "u128"
+                    | "usize"
+                    | "f32"
+                    | "f64"
+                    | "Option"
+                    | "Vec"
+                    | "Box"
+                    | "Rc"
+                    | "Arc"
+                    | "Cow"
+                    | "Result"
+                    | "HashMap"
+                    | "BTreeMap"
+                    | "HashSet"
+                    | "BTreeSet"
+            )
+            || (type_name.len() == 1
+                && type_name
+                    .chars()
+                    .next()
+                    .map(|ch| ch.is_ascii_uppercase())
+                    .unwrap_or(false))
+        {
+            return None;
+        }
+
+        let partial_name = format!("Partial{type_name}");
+        last.ident = Ident::new(&partial_name, last.ident.span());
+
+        Some(Type::Path(path))
+    }
+
+    pub fn is_auto_nested(&self) -> bool {
+        self.auto_nested_ty().is_some()
+    }
+
     fn validate(self) -> Result<Self> {
         let mut acc = darling::Error::accumulator();
 
@@ -89,6 +177,8 @@ impl ToTokens for FieldReceiver {
             src_type.to_owned()
         } else if let Some(ty) = &self.as_type {
             ty.to_owned()
+        } else if let Some(nested) = self.auto_nested_ty() {
+            nested
         } else {
             let ty: Type = parse_quote! {
                 Option<#src_type>

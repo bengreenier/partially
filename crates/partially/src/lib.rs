@@ -39,6 +39,10 @@
 /// > Usage example: `#[partially(as_type = "Option<f32>")]`.
 /// Instructs the macro to use the provided type instead of [`Option<T>`] when generating the field. Note that the provided type will be used verbatim, so if you expect an [`Option<T>`] value, you'll need to manually specify that.
 /// Note: When using `as_type`, the given type must `Into<BaseType>` where `BaseType` is the original field type. This is required for `Partial` trait implementation.
+/// ### nested partials (automatic)
+/// For fields that look like user-defined types (for example, `Address`), the derive macro
+/// will automatically use the generated partial type (for example, `PartialAddress`) and call
+/// [`Partial::apply_some`] on that field, enabling nested updates without any extra field attribute.
 ///
 /// ## Example
 /// ```

@@ -35,8 +35,11 @@ impl<'a> ToTokens for ImplPartial<'a> {
             parse_quote!(partially)
         };
 
-        let field_is_somes = fields
+        let has_nested_fields = fields.iter().any(|f| f.is_auto_nested());
+
+        let non_nested_field_is_somes: Vec<_> = fields
             .iter()
+            .filter(|f| !f.is_auto_nested())
             .map(|f| {
                 // this is enforced with a better error by [`FieldReceiver::validate`].
                 let from_ident = f.ident.as_ref().unwrap();
@@ -46,7 +49,14 @@ impl<'a> ToTokens for ImplPartial<'a> {
                 quote!(partial.#to_ident.is_some())
             })
             .collect();
-        let field_is_somes = TokenVec::new_with_vec_and_sep(field_is_somes, Separator::Or);
+        let has_non_nested_fields = !non_nested_field_is_somes.is_empty();
+        let non_nested_field_is_somes =
+            TokenVec::new_with_vec_and_sep(non_nested_field_is_somes, Separator::Or);
+        let field_is_somes = if has_nested_fields || !has_non_nested_fields {
+            quote!(false || #non_nested_field_is_somes)
+        } else {
+            quote!(#non_nested_field_is_somes)
+        };
 
         let field_applicators = fields
             .iter()
@@ -56,9 +66,15 @@ impl<'a> ToTokens for ImplPartial<'a> {
 
                 let to_ident = f.rename.as_ref().unwrap_or(from_ident);
 
-                quote! {
-                    if let Some(#to_ident) = partial.#to_ident {
-                        self.#from_ident = #to_ident.into();
+                if f.is_auto_nested() {
+                    quote! {
+                        will_apply_some = #krate::Partial::apply_some(&mut self.#from_ident, partial.#to_ident) || will_apply_some;
+                    }
+                } else {
+                    quote! {
+                        if let Some(#to_ident) = partial.#to_ident {
+                            self.#from_ident = #to_ident.into();
+                        }
                     }
                 }
             })
@@ -66,12 +82,22 @@ impl<'a> ToTokens for ImplPartial<'a> {
         let field_applicators =
             TokenVec::new_with_vec_and_sep(field_applicators, Separator::Newline);
 
+        let will_apply_some_decl = if has_nested_fields {
+            quote! {
+                let mut will_apply_some = #field_is_somes;
+            }
+        } else {
+            quote! {
+                let will_apply_some = #field_is_somes;
+            }
+        };
+
         tokens.extend(quote! {
             impl #imp #krate::Partial for #from_ident #ty #wher {
                 type Item = #to_ident #ty;
 
                 fn apply_some(&mut self, partial: Self::Item) -> bool {
-                    let will_apply_some = #field_is_somes;
+                    #will_apply_some_decl
 
                     #field_applicators
 
