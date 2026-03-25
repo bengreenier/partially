@@ -1,6 +1,7 @@
 use darling::{util::Flag, FromField, Result};
+use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{parse_quote, Ident, PathArguments, Type, Visibility};
+use syn::{parse_quote, Ident, Path, Type, Visibility};
 
 #[derive(Debug, FromField)]
 #[darling(attributes(partially), forward_attrs, and_then = FieldReceiver::validate)]
@@ -39,97 +40,14 @@ pub struct FieldReceiver {
     /// Note: If specified, the given [`Type`] will be used verbatim, not wrapped in an [`Option`].
     /// Note: By default, [`Option<Self::ty>`] is used.
     pub as_type: Option<Type>,
+
+    /// A flag indicating the field's type is itself [`partially::Partial`].
+    ///
+    /// Note: When present, the generated field type is `<Self::ty as Partial>::Item`.
+    pub nested: Flag,
 }
 
 impl FieldReceiver {
-    fn auto_nested_ty(&self) -> Option<Type> {
-        if self.omit.is_present() || self.transparent.is_present() || self.as_type.is_some() {
-            return None;
-        }
-
-        let Type::Path(mut path) = self.ty.clone() else {
-            return None;
-        };
-
-        if path.qself.is_some() {
-            return None;
-        }
-
-        let first_ident = path.path.segments.first().map(|s| s.ident.to_string())?;
-        if matches!(first_ident.as_str(), "std" | "core" | "alloc") {
-            return None;
-        }
-
-        let last = path.path.segments.last_mut()?;
-        match last.arguments {
-            PathArguments::None | PathArguments::AngleBracketed(_) => {}
-            _ => return None,
-        }
-
-        let type_name = last.ident.to_string();
-        if !type_name
-            .chars()
-            .next()
-            .map(|ch| ch.is_ascii_uppercase())
-            .unwrap_or(false)
-        {
-            return None;
-        }
-
-        if type_name.starts_with("Partial")
-            || matches!(
-                type_name.as_str(),
-                "String"
-                    | "Self"
-                    | "bool"
-                    | "char"
-                    | "str"
-                    | "i8"
-                    | "i16"
-                    | "i32"
-                    | "i64"
-                    | "i128"
-                    | "isize"
-                    | "u8"
-                    | "u16"
-                    | "u32"
-                    | "u64"
-                    | "u128"
-                    | "usize"
-                    | "f32"
-                    | "f64"
-                    | "Option"
-                    | "Vec"
-                    | "Box"
-                    | "Rc"
-                    | "Arc"
-                    | "Cow"
-                    | "Result"
-                    | "HashMap"
-                    | "BTreeMap"
-                    | "HashSet"
-                    | "BTreeSet"
-            )
-            || (type_name.len() == 1
-                && type_name
-                    .chars()
-                    .next()
-                    .map(|ch| ch.is_ascii_uppercase())
-                    .unwrap_or(false))
-        {
-            return None;
-        }
-
-        let partial_name = format!("Partial{type_name}");
-        last.ident = Ident::new(&partial_name, last.ident.span());
-
-        Some(Type::Path(path))
-    }
-
-    pub fn is_auto_nested(&self) -> bool {
-        self.auto_nested_ty().is_some()
-    }
-
     fn validate(self) -> Result<Self> {
         let mut acc = darling::Error::accumulator();
 
@@ -140,25 +58,30 @@ impl FieldReceiver {
         }
 
         if self.omit.is_present()
-            && (self.rename.is_some() || self.transparent.is_present() || self.as_type.is_some())
+            && (self.rename.is_some()
+                || self.transparent.is_present()
+                || self.as_type.is_some()
+                || self.nested.is_present())
         {
             acc.push(darling::Error::custom(
                 "cannot use omit with any other options",
             ));
         }
 
-        if self.transparent.is_present() && self.as_type.is_some() {
+        if self.transparent.is_present() as i32
+            + self.as_type.is_some() as i32
+            + self.nested.is_present() as i32
+            > 1
+        {
             acc.push(darling::Error::custom(
-                "cannot use both transparent and as_type",
+                "transparent, as_type, and nested are mutually exclusive",
             ));
         }
 
         acc.finish_with(self)
     }
-}
 
-impl ToTokens for FieldReceiver {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    pub fn to_tokens_with_krate(&self, tokens: &mut TokenStream, krate: &Path) {
         if self.omit.is_present() {
             return;
         }
@@ -177,8 +100,8 @@ impl ToTokens for FieldReceiver {
             src_type.to_owned()
         } else if let Some(ty) = &self.as_type {
             ty.to_owned()
-        } else if let Some(nested) = self.auto_nested_ty() {
-            nested
+        } else if self.nested.is_present() {
+            parse_quote!(<#src_type as #krate::Partial>::Item)
         } else {
             let ty: Type = parse_quote! {
                 Option<#src_type>
@@ -202,6 +125,13 @@ impl ToTokens for FieldReceiver {
     }
 }
 
+impl ToTokens for FieldReceiver {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let krate: Path = parse_quote!(partially);
+        self.to_tokens_with_krate(tokens, &krate);
+    }
+}
+
 #[cfg(test)]
 mod test {
     use darling::util::Flag;
@@ -221,6 +151,7 @@ mod test {
             omit: Flag::default(),
             transparent: Flag::default(),
             as_type: None,
+            nested: Flag::default(),
         }
     }
 
@@ -259,6 +190,33 @@ mod test {
         instance.as_type = Some(syn::Type::Verbatim(quote!(NewDummyField)));
 
         assert!(instance.validate().is_err())
+    }
+
+    #[test]
+    fn invalidate_omit_nested() {
+        let mut instance = make_dummy();
+        instance.omit = Flag::present();
+        instance.nested = Flag::present();
+
+        assert!(instance.validate().is_err())
+    }
+
+    #[test]
+    fn invalidate_transparent_as_type_nested() {
+        let mut instance = make_dummy();
+        instance.transparent = Flag::present();
+        instance.as_type = Some(syn::Type::Verbatim(quote!(NewDummyField)));
+        assert!(instance.validate().is_err());
+
+        let mut instance = make_dummy();
+        instance.transparent = Flag::present();
+        instance.nested = Flag::present();
+        assert!(instance.validate().is_err());
+
+        let mut instance = make_dummy();
+        instance.as_type = Some(syn::Type::Verbatim(quote!(NewDummyField)));
+        instance.nested = Flag::present();
+        assert!(instance.validate().is_err());
     }
 
     #[test]

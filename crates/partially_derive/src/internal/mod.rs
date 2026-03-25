@@ -539,6 +539,7 @@ mod test {
             #[partially(derive(Default, Debug))]
             struct Outer {
                 value: String,
+                #[partially(nested)]
                 inner: Inner,
             }
         };
@@ -549,7 +550,7 @@ mod test {
             #[derive(Default, Debug)]
             struct PartialOuter {
                 value: Option<String>,
-                inner: PartialInner
+                inner: <Inner as partially::Partial>::Item
             }
 
             impl partially::Partial for Outer {

@@ -162,8 +162,6 @@ Instructs the macro to omit the field from the generated struct. By default, no 
 
 Instructs the macro to skip wrapping the generated field in `Option<T>`, instead transparently mirroring the field type into the generated struct.
 
-Note: this can also be used to opt out of automatic nested partial generation for a field.
-
 #### as_type
 
 > Usage example: `#[partially(as_type = "Option<f32>")]`.
@@ -172,8 +170,8 @@ Instructs the macro to use the provided type instead of `Option<T>` when generat
 
 Note: When using `as_type`, the given type must `Into<BaseType>` where `BaseType` is the original field type. This is required for `Partial` trait implementation.
 
-### Automatic nested partials
+#### nested
 
-If a field looks like another user-defined struct type (for example `Address`), the generated partial field will transparently use `PartialAddress` and `apply_some` will recursively apply that nested partial.
+> Usage example: `#[partially(nested)]`.
 
-This means nested partial support works without any extra field attribute on the parent type.
+Instructs the macro to treat this field's type as `Partial` itself. The generated field type becomes `<FieldType as Partial>::Item`, and generated `apply_some` recursively applies updates via `Partial::apply_some`.

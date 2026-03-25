@@ -10,6 +10,7 @@ struct Inner {
 #[partially(derive(Default))]
 struct Outer {
     top: String,
+    #[partially(nested)]
     inner: Inner,
 }
 
@@ -47,6 +48,7 @@ struct GenericOuter<T> {
 #[derive(partially_derive::Partial)]
 #[partially(derive(Default))]
 struct Wrapper {
+    #[partially(nested)]
     generic: GenericOuter<String>,
 }
 

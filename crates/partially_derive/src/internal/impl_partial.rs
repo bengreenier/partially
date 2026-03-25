@@ -1,5 +1,5 @@
 use quote::{quote, ToTokens};
-use syn::{parse_quote, Generics, Ident, Path};
+use syn::{Generics, Ident, Path};
 
 use super::{
     field_receiver::FieldReceiver,
@@ -7,7 +7,7 @@ use super::{
 };
 
 pub struct ImplPartial<'a> {
-    pub krate: &'a Option<Path>,
+    pub krate: &'a Path,
     pub generics: &'a Generics,
     pub from_ident: &'a Ident,
     pub to_ident: &'a Ident,
@@ -28,18 +28,11 @@ impl<'a> ToTokens for ImplPartial<'a> {
 
         let (imp, ty, wher) = generics.split_for_impl();
 
-        // parse the crate config, or use `partially` for the crate path
-        let krate = if let Some(krate) = krate {
-            krate.to_owned()
-        } else {
-            parse_quote!(partially)
-        };
-
-        let has_nested_fields = fields.iter().any(|f| f.is_auto_nested());
+        let has_nested_fields = fields.iter().any(|f| f.nested.is_present());
 
         let non_nested_field_is_somes: Vec<_> = fields
             .iter()
-            .filter(|f| !f.is_auto_nested())
+            .filter(|f| !f.nested.is_present())
             .map(|f| {
                 // this is enforced with a better error by [`FieldReceiver::validate`].
                 let from_ident = f.ident.as_ref().unwrap();
@@ -68,7 +61,7 @@ impl<'a> ToTokens for ImplPartial<'a> {
 
                 let to_ident = f.rename.as_ref().unwrap_or(from_ident);
 
-                if f.is_auto_nested() {
+                if f.nested.is_present() {
                     quote! {
                         will_apply_some = #krate::Partial::apply_some(&mut self.#from_ident, partial.#to_ident) || will_apply_some;
                     }

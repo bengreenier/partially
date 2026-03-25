@@ -5,7 +5,7 @@ use darling::{
 };
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{Attribute, Generics, Ident, Path, Visibility};
+use syn::{parse_quote, Attribute, Generics, Ident, Path, Visibility};
 
 use super::{
     field_receiver::FieldReceiver,
@@ -89,6 +89,13 @@ impl ToTokens for DeriveReceiver {
             ref krate,
         } = *self;
 
+        // parse the crate config, or use `partially` for the crate path
+        let krate = if let Some(krate) = krate {
+            krate.to_owned()
+        } else {
+            parse_quote!(partially)
+        };
+
         let (_, ty, wher) = generics.split_for_impl();
 
         let fields: Vec<_> = data
@@ -132,7 +139,13 @@ impl ToTokens for DeriveReceiver {
             #additional_attrs
         });
 
-        let field_tokens = TokenVec::new_with_vec_and_sep(fields.clone(), Separator::CommaNewline);
+        let mut field_tokens: Vec<TokenStream> = Vec::new();
+        for field in &fields {
+            let mut token = TokenStream::new();
+            field.to_tokens_with_krate(&mut token, &krate);
+            field_tokens.push(token);
+        }
+        let field_tokens = TokenVec::new_with_vec_and_sep(field_tokens, Separator::CommaNewline);
 
         // write the struct
         tokens.extend(quote! {
@@ -143,7 +156,7 @@ impl ToTokens for DeriveReceiver {
 
         // create the impl
         let impl_partial = ImplPartial {
-            krate,
+            krate: &krate,
             from_ident: ident,
             to_ident: &to_ident,
             generics,
@@ -157,7 +170,7 @@ impl ToTokens for DeriveReceiver {
 
         // create the partial => partial impl
         let partial_impl_partial = ImplPartial {
-            krate,
+            krate: &krate,
             from_ident: &to_ident,
             to_ident: &to_ident,
             generics,

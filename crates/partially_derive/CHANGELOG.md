@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- *(derive)* transparently treat nested `Partial` fields as nested partials without an extra field attribute
+- *(derive)* add `#[partially(nested)]` field option to map to `<FieldType as Partial>::Item` and recurse with `apply_some`
 
 ## [0.2.1](https://github.com/bengreenier/partially/compare/partially_derive-v0.2.0...partially_derive-v0.2.1) - 2024-01-20
 
