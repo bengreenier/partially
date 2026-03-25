@@ -1,6 +1,6 @@
 use darling::{util::Flag, FromField, Result};
 use quote::{quote, ToTokens};
-use syn::{parse_quote, Ident, Type, Visibility};
+use syn::{parse_quote, Ident, Path, Type, Visibility};
 
 #[derive(Debug, FromField)]
 #[darling(attributes(partially), forward_attrs, and_then = FieldReceiver::validate)]
@@ -39,6 +39,11 @@ pub struct FieldReceiver {
     /// Note: If specified, the given [`Type`] will be used verbatim, not wrapped in an [`Option`].
     /// Note: By default, [`Option<Self::ty>`] is used.
     pub as_type: Option<Type>,
+
+    /// A flag indicating that this field has a type that implements [`Partial`] and should
+    /// use its associated `Partial::Item` type in the generated struct, with `apply_some`
+    /// delegated to the nested field.
+    pub nested: Flag,
 }
 
 impl FieldReceiver {
@@ -52,16 +57,28 @@ impl FieldReceiver {
         }
 
         if self.omit.is_present()
-            && (self.rename.is_some() || self.transparent.is_present() || self.as_type.is_some())
+            && (self.rename.is_some()
+                || self.transparent.is_present()
+                || self.as_type.is_some()
+                || self.nested.is_present())
         {
             acc.push(darling::Error::custom(
                 "cannot use omit with any other options",
             ));
         }
 
-        if self.transparent.is_present() && self.as_type.is_some() {
+        let exclusive_count = [
+            self.transparent.is_present(),
+            self.as_type.is_some(),
+            self.nested.is_present(),
+        ]
+        .iter()
+        .filter(|&&b| b)
+        .count();
+
+        if exclusive_count > 1 {
             acc.push(darling::Error::custom(
-                "cannot use both transparent and as_type",
+                "transparent, as_type and nested are mutually exclusive",
             ));
         }
 
@@ -69,26 +86,40 @@ impl FieldReceiver {
     }
 }
 
-impl ToTokens for FieldReceiver {
+/// Wrapper that pairs a [`FieldReceiver`] with a crate [`Path`] so that nested fields
+/// can reference `<T as krate::Partial>::Item`. Implements [`ToTokens`] for use with
+/// [`TokenVec`].
+pub struct FieldTokenizer<'a> {
+    pub field: &'a FieldReceiver,
+    pub krate: &'a Path,
+}
+
+impl ToTokens for FieldTokenizer<'_> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        if self.omit.is_present() {
+        let f = self.field;
+        let krate = self.krate;
+
+        if f.omit.is_present() {
             return;
         }
 
-        // this is enforced with a better error by [`FieldReceiver::validate`].
-        let src_name = self.ident.as_ref().expect("expected a named field");
+        let src_name = f.ident.as_ref().expect("expected a named field");
 
-        let dst_name = if let Some(name) = &self.rename {
+        let dst_name = if let Some(name) = &f.rename {
             name
         } else {
             src_name
         };
 
-        let src_type = &self.ty;
-        let dst_type = if self.transparent.is_present() {
+        let src_type = &f.ty;
+        let dst_type = if f.transparent.is_present() {
             src_type.to_owned()
-        } else if let Some(ty) = &self.as_type {
+        } else if let Some(ty) = &f.as_type {
             ty.to_owned()
+        } else if f.nested.is_present() {
+            parse_quote! {
+                <#src_type as #krate::Partial>::Item
+            }
         } else {
             let ty: Type = parse_quote! {
                 Option<#src_type>
@@ -97,8 +128,8 @@ impl ToTokens for FieldReceiver {
             ty
         };
 
-        let vis = &self.vis;
-        let forwarded_attrs = &self.attrs;
+        let vis = &f.vis;
+        let forwarded_attrs = &f.attrs;
 
         for attr in forwarded_attrs {
             tokens.extend(quote! {
@@ -131,6 +162,7 @@ mod test {
             omit: Flag::default(),
             transparent: Flag::default(),
             as_type: None,
+            nested: Flag::default(),
         }
     }
 
@@ -172,10 +204,47 @@ mod test {
     }
 
     #[test]
+    fn invalidate_omit_nested() {
+        let mut instance = make_dummy();
+        instance.omit = Flag::present();
+        instance.nested = Flag::present();
+
+        assert!(instance.validate().is_err())
+    }
+
+    #[test]
     fn invalidate_transparent_as_type() {
         let mut instance = make_dummy();
         instance.transparent = Flag::present();
         instance.as_type = Some(syn::Type::Verbatim(quote!(NewDummyField)));
+
+        assert!(instance.validate().is_err())
+    }
+
+    #[test]
+    fn invalidate_transparent_nested() {
+        let mut instance = make_dummy();
+        instance.transparent = Flag::present();
+        instance.nested = Flag::present();
+
+        assert!(instance.validate().is_err())
+    }
+
+    #[test]
+    fn invalidate_as_type_nested() {
+        let mut instance = make_dummy();
+        instance.as_type = Some(syn::Type::Verbatim(quote!(NewDummyField)));
+        instance.nested = Flag::present();
+
+        assert!(instance.validate().is_err())
+    }
+
+    #[test]
+    fn invalidate_transparent_as_type_nested() {
+        let mut instance = make_dummy();
+        instance.transparent = Flag::present();
+        instance.as_type = Some(syn::Type::Verbatim(quote!(NewDummyField)));
+        instance.nested = Flag::present();
 
         assert!(instance.validate().is_err())
     }

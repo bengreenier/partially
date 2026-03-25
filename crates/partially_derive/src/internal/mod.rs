@@ -430,6 +430,122 @@ mod test {
     }
 
     #[test]
+    fn nested_e2e() {
+        let mut input: DeriveInput = parse_quote! {
+            #[derive(partially::Partial, Default, Debug)]
+            #[partially(derive(Default, Debug))]
+            struct Data {
+                normal_field: String,
+                #[partially(nested)]
+                child_field: Inner
+            }
+        };
+
+        let expanded = expand_derive_partial(&mut input);
+
+        let expected: TokenStream = parse_quote! {
+            #[derive(Default, Debug)]
+            struct PartialData {
+                normal_field: Option<String>,
+                child_field: <Inner as partially::Partial>::Item
+            }
+
+            impl partially::Partial for Data {
+                type Item = PartialData;
+
+                fn apply_some(&mut self, partial: Self::Item) -> bool {
+                    let mut will_apply_some = partial.normal_field.is_some();
+
+                    if let Some(normal_field) = partial.normal_field {
+                        self.normal_field = normal_field.into();
+                    }
+
+                    will_apply_some = partially::Partial::apply_some(
+                        &mut self.child_field,
+                        partial.child_field
+                    ) || will_apply_some;
+
+                    will_apply_some
+                }
+            }
+
+            impl partially::Partial for PartialData {
+                type Item = PartialData;
+
+                fn apply_some(&mut self, partial: Self::Item) -> bool {
+                    let mut will_apply_some = partial.normal_field.is_some();
+
+                    if let Some(normal_field) = partial.normal_field {
+                        self.normal_field = normal_field.into();
+                    }
+
+                    will_apply_some = partially::Partial::apply_some(
+                        &mut self.child_field,
+                        partial.child_field
+                    ) || will_apply_some;
+
+                    will_apply_some
+                }
+            }
+        };
+
+        assert_eq!(expanded.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn nested_only_e2e() {
+        let mut input: DeriveInput = parse_quote! {
+            #[derive(partially::Partial)]
+            #[partially(derive(Default))]
+            struct Wrapper {
+                #[partially(nested)]
+                inner: Inner
+            }
+        };
+
+        let expanded = expand_derive_partial(&mut input);
+
+        let expected: TokenStream = parse_quote! {
+            #[derive(Default)]
+            struct PartialWrapper {
+                inner: <Inner as partially::Partial>::Item
+            }
+
+            impl partially::Partial for Wrapper {
+                type Item = PartialWrapper;
+
+                fn apply_some(&mut self, partial: Self::Item) -> bool {
+                    let mut will_apply_some = false;
+
+                    will_apply_some = partially::Partial::apply_some(
+                        &mut self.inner,
+                        partial.inner
+                    ) || will_apply_some;
+
+                    will_apply_some
+                }
+            }
+
+            impl partially::Partial for PartialWrapper {
+                type Item = PartialWrapper;
+
+                fn apply_some(&mut self, partial: Self::Item) -> bool {
+                    let mut will_apply_some = false;
+
+                    will_apply_some = partially::Partial::apply_some(
+                        &mut self.inner,
+                        partial.inner
+                    ) || will_apply_some;
+
+                    will_apply_some
+                }
+            }
+        };
+
+        assert_eq!(expanded.to_string(), expected.to_string());
+    }
+
+    #[test]
     fn extensive_attr_e2e() {
         let mut input: DeriveInput = parse_quote! {
             #[derive(partially::Partial, Default, Debug)]
