@@ -41,6 +41,30 @@ fn nested_apply_some() {
 
 #[derive(partially_derive::Partial)]
 #[partially(derive(Default))]
+struct OuterNoNested {
+    inner: Inner,
+}
+
+#[test]
+fn non_nested_field_remains_option_wrapped() {
+    let mut value = OuterNoNested {
+        inner: Inner {
+            value: "before".to_string(),
+        },
+    };
+
+    let patch = PartialOuterNoNested {
+        inner: Some(Inner {
+            value: "after".to_string(),
+        }),
+    };
+
+    assert!(value.apply_some(patch));
+    assert_eq!(value.inner.value, "after".to_string());
+}
+
+#[derive(partially_derive::Partial)]
+#[partially(derive(Default))]
 struct GenericOuter<T> {
     value: T,
 }
