@@ -9,6 +9,7 @@ use syn::{Attribute, Generics, Ident, Path, Visibility};
 
 use super::{
     field_receiver::FieldReceiver,
+    impl_from_full::ImplFromFull,
     impl_partial::ImplPartial,
     meta_attribute::MetaAttribute,
     token_vec::{Separator, TokenVec},
@@ -72,6 +73,13 @@ pub struct DeriveReceiver {
     /// Receives an optional [`Path`] defining the path to the `partially` crate.
     #[darling(rename = "crate")]
     pub krate: Option<Path>,
+
+    /// When set, skips generating `impl core::convert::From<FullStruct> for PartialStruct`.
+    ///
+    /// For `#[partially(as_type = "...")]` fields, the base field type must implement
+    /// `Into` the partial field's inner type (the inverse direction of what `apply_some` uses).
+    #[darling(rename = "skip_from_full")]
+    pub skip_from_full: Flag,
 }
 
 impl ToTokens for DeriveReceiver {
@@ -87,6 +95,7 @@ impl ToTokens for DeriveReceiver {
             ref additional_attrs,
             ref skip_attrs,
             ref krate,
+            ref skip_from_full,
         } = *self;
 
         let (_, ty, wher) = generics.split_for_impl();
@@ -140,6 +149,18 @@ impl ToTokens for DeriveReceiver {
                 #field_tokens
             }
         });
+
+        if !skip_from_full.is_present() {
+            let impl_from_full = ImplFromFull {
+                generics,
+                full_ident: ident,
+                partial_ident: &to_ident,
+                fields: &fields,
+            };
+            tokens.extend(quote! {
+                #impl_from_full
+            });
+        }
 
         // create the impl
         let impl_partial = ImplPartial {

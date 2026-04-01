@@ -1,3 +1,9 @@
 [workspace]
 resolver = "2"
 members = ["crates/*"]
+
+# The test_no_std crate requires this:
+# > unwinding panics are not supported without std
+# Notably, this profile doesn't affect downstream users of the crate.
+[profile.dev]
+panic = "abort"

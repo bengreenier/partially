@@ -7,6 +7,7 @@ use self::derive_receiver::DeriveReceiver;
 
 mod derive_receiver;
 mod field_receiver;
+mod impl_from_full;
 mod impl_partial;
 mod meta_attribute;
 mod token_vec;
@@ -64,6 +65,17 @@ mod test {
                 number_field: Option<f32>,
                 transparent_field: Option<String>,
                 new_field: Option<String>
+            }
+
+            impl core::convert::From<Data> for PartialData {
+                fn from(full: Data) -> Self {
+                    Self {
+                        str_field: Some(full.str_field.into()),
+                        number_field: Some(full.number_field.into()),
+                        transparent_field: full.transparent_field,
+                        new_field: Some(full.old_field.into())
+                    }
+                }
             }
 
             impl partially::Partial for Data {
@@ -134,6 +146,7 @@ mod test {
             #[derive(partially::Partial, Default, Debug)]
             #[partially(rename = "OptData")]
             #[partially(derive(Default, Debug))]
+            #[partially(skip_from_full)]
             #[some_attr]
             struct Data {
                 /// A documented field.
@@ -234,6 +247,7 @@ mod test {
             #[derive(partially::Partial, Default, Debug)]
             #[partially(rename = "PartialData")]
             #[partially(derive(Default, Debug))]
+            #[partially(skip_from_full)]
             #[some_attr]
             struct Data<T> {
                 /// A documented field.
@@ -335,6 +349,7 @@ mod test {
             #[partially(rename = "PartialData")]
             #[partially(derive(Default, Debug))]
             #[partially(crate = "custom_partially")]
+            #[partially(skip_from_full)]
             #[some_attr]
             struct Data<T> where T: Sized {
                 /// A documented field.
@@ -437,6 +452,7 @@ mod test {
             #[partially(attribute(serde(default)))]
             #[partially(attribute(serde(rename = "PascalCase")))]
             #[partially(skip_attributes)]
+            #[partially(skip_from_full)]
             #[some_attr]
             struct Data {
                 /// A documented field.

@@ -24,6 +24,9 @@
 /// ### crate
 /// > Usage example: `#[partially(crate = "my_partially_crate")]`.
 /// Instructs the macro to use a different base path for the `Partial` trait implementation. By default, `partially` is used. This can be useful if you've forked the `partially` crate.
+/// ### skip_from_full
+/// > Usage example: `#[partially(skip_from_full)]`.
+/// By default, the macro generates `impl From<YourStruct> for PartialYourStruct`, mapping each base field into the partial: normal optional fields use `Some(value)` (with `.into()` for `as_type` fields), and `transparent` fields are copied as-is. Set this flag to skip generating that implementation. For `as_type` fields, the base field type must implement `Into` the partial field's inner type when this impl is generated.
 ///
 /// ## Field Options
 /// ### rename

@@ -26,6 +26,7 @@ impl From<V1> for V2 {
 }
 
 #[derive(partially_derive::Partial)]
+#[partially(skip_from_full)]
 #[partially(derive(Default))]
 struct Data {
     #[partially(as_type = "Option<V1>")]

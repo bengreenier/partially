@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- *(derive)* implements `From<Struct>` for `PartialStruct`
+
 ## [0.2.1](https://github.com/bengreenier/partially/compare/partially_derive-v0.2.0...partially_derive-v0.2.1) - 2024-01-20
 
 ### Added

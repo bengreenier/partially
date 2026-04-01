@@ -20,18 +20,17 @@ jobs:
       - name: Install cargo-all-features
         run: cargo install cargo-all-features
       - name: Build
-        run: cargo build-all-features --exclude test_no_std --workspace --verbose
+        run: cargo build-all-features
       - name: Run tests
-        run: cargo test-all-features --exclude test_no_std --workspace --verbose
+        run: cargo test-all-features
       - name: Run clippy
-        run: cargo clippy --exclude test_no_std --workspace --verbose
+        run: cargo clippy --workspace --verbose
 
   build_no_std:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
-      # the test_no_std crate requires the nightly toolchain
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@stable
       - name: Build test_no_std
-        run: cd crates/test_no_std && cargo +nightly build --verbose
+        run: cargo build -p test_no_std --verbose
